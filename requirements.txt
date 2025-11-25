@@ -1,0 +1,10 @@
+datasets==2.19.1
+fastapi
+streamlit
+langchain 
+langchain-community 
+langchain-core
+peft
+pyngrok
+transformers
+uvicorn
