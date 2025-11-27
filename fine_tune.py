@@ -1,6 +1,7 @@
 from datasets import load_dataset, concatenate_datasets
 from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForLanguageModeling, TrainingArguments, Trainer
 from peft import LoraConfig, get_peft_model
+import os 
 
 #Function for normalizing datasets in order to combine them into one 
 def normalize(ds):
@@ -113,13 +114,17 @@ model = get_peft_model(model, peft_config)
 
 #Training arguments
 training_args = TrainingArguments(
-    output_dir="legal-qwen25-7b",
+    output_dir=None,               
+    save_strategy="no",            
+    save_steps=0,
+    save_total_limit=0,
+    logging_dir=None,              
+    logging_strategy="no",       
+
     per_device_train_batch_size=1,
     gradient_accumulation_steps=8,
     num_train_epochs=2,
     learning_rate=2e-4,
-    logging_steps=5,
-    save_steps=200,
     fp16=True,
     report_to="none",
 )
@@ -141,3 +146,5 @@ trainer.train()
 merged_model = trainer.model.merge_and_unload()
 merged_model.save_pretrained("fine-tuned-model")
 tokenizer.save_pretrained("fine-tuned-model")
+
+os.rmdir("trainer_output")
