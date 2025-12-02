@@ -1,6 +1,6 @@
-from langchain_community.output_parsers import StructuredOutputParser, ResponseSchema
-from langchain_community.llms import HuggingFacePipeline
-from langchain_core.prompts import PromptTemplate
+from langchain.output_parsers import StructuredOutputParser, ResponseSchema
+from langchain.llms import HuggingFacePipeline
+from langchain.prompts import PromptTemplate
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from utils.utils import *
 
