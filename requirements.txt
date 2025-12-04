@@ -1,10 +1,10 @@
 bitsandbytes
 datasets==2.19.1
 fastapi
+numpy==1.26.4
 streamlit
-langchain==0.1.7
-langchain-community==0.0.28
-langchain-core==0.1.29
+langchain==0.3.27
+langchain-community==0.3.27
 peft
 pyngrok
 transformers
