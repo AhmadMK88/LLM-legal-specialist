@@ -2,6 +2,7 @@ bitsandbytes
 datasets==2.19.1
 fastapi
 numpy==1.26.4
+requests
 streamlit
 langchain==0.3.27
 langchain-community==0.3.27
