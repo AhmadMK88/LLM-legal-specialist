@@ -1,6 +1,8 @@
 from peft import LoraConfig
 from transformers import TrainingArguments
 
+API_KEY = "secret123"
+
 LORA_CONFIG = LoraConfig(
     r=16,
     lora_alpha=32,
