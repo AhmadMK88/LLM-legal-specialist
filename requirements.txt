@@ -4,6 +4,7 @@ fastapi
 numpy==1.26.4
 requests
 streamlit
+langdetect 
 langchain==0.3.27
 langchain-community==0.3.27
 peft
