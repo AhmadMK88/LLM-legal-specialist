@@ -1,3 +1,4 @@
+from langdetect import detect
 from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 from langchain.llms import HuggingFacePipeline
 from langchain.prompts import PromptTemplate
@@ -30,17 +31,32 @@ conclusion_schema = ResponseSchema(
 )
 related_laws_schema = ResponseSchema(
     name="related_laws",
-    description="Relevant laws."
+    description=("Relevant laws."
+                 "Must be in the same language as the conclusion ")
 )
 
 risk_level_schema = ResponseSchema(
     name="risk_level",
-    description="Low, Medium, or High."
+    description=("Risk severity."
+                 "Must be in the same language as the conclusion ")
 )
 
 response_schemas = [conclusion_schema, related_laws_schema, risk_level_schema]
 output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
 format_instructions = output_parser.get_format_instructions()
+
+# Output labels according to language
+LABELS = {
+    'en':{
+        'related_laws':'- Related Laws:',
+        'risk_level':'- Risk Level:'
+    },
+
+    'ar':{
+        'related_laws':':القوانين ذات صلة -',
+        'risk_level':':مستوى المخاطر -'
+    }
+} 
 
 # Create question prompt
 prompt = PromptTemplate(
@@ -55,6 +71,8 @@ You MUST follow these rules:
 - Follow EXACTLY the schema
 - Do NOT include explanations
 - Do NOT include any extra text
+- Include appropriate labels inside the text fields
+- Labels must be in the SAME language as the conclusion
 - Return ONLY valid JSON
 
 {format_instructions}
@@ -68,9 +86,13 @@ def generate_answer(question):
     output = llm_pipe(prompt_text)[0]["generated_text"]
     json_block = extract_json_block(output)
     parsed_json = parse_json(json_block)
+
+    language = detect(parsed_json.get("conclusion", "N/A"))
+    labels = LABELS[language]
+    
     answer = (
         f"{parsed_json.get('conclusion', 'N/A')}\n"
-        f"- Related Laws: {parsed_json.get('related_laws', 'N/A')}\n"
-        f"- Risk Level: {parsed_json.get('risk_level', 'N/A')}\n"
+        f"{labels['related_laws']}\n {parsed_json.get('related_laws', 'N/A')}\n"
+        f"{labels['risk_level']}\n {parsed_json.get('risk_level', 'N/A')}\n"
     )
     return answer
