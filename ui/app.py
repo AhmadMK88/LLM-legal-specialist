@@ -1,95 +1,94 @@
 import streamlit as st
 import requests
 from config.configs import API_URL, API_HEADERS
+from langdetect import detect
 
 # -----------------------------
-# Streamlit Page Config
+# Page config
 # -----------------------------
-st.set_page_config(page_title="Legal AI Assistant", page_icon="⚖️", layout="wide")
-
-st.markdown("""
-    <style>
-    .chat-message {
-        padding: 1rem;
-        border-radius: 1rem;
-        margin-bottom: 1rem;
-        max-width: 80%;
-    }
-    .user-message {
-        background-color: #343541; color: #FFFFFF;
-        margin-left: auto;
-    }
-    .bot-message {
-        background-color: #444654; color: #FFFFFF;
-        margin-right: auto;
-    }
-    .chat-container {
-        max-height: 70vh;
-        overflow-y: auto;
-        padding-right: 1rem;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.set_page_config(
+    page_title="Legal AI Assistant",
+    page_icon="⚖️",
+    layout="wide"
+)
 
 # -----------------------------
-# Session State
+# Helper: RTL-aware renderer
+# -----------------------------
+def render_message(text: str, role: str):
+    try:
+        lang = detect(text)
+    except:
+        lang = "en"
+
+    if lang == "ar":
+        st.markdown(
+            f'<div dir="rtl" style="text-align:right; white-space:pre-line; margin:0;">{text}</div>',
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(text)
+
+# -----------------------------
+# Session state
 # -----------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "loading" not in st.session_state:
-    st.session_state.loading = False
+
+if "pending_prompt" not in st.session_state:
+    st.session_state.pending_prompt = None
 
 # -----------------------------
 # Sidebar
 # -----------------------------
 st.sidebar.title("⚖️ Legal AI Specialist")
 st.sidebar.write("Ask legal questions with an LLM backend.")
+
 if st.sidebar.button("Clear Chat"):
     st.session_state.messages = []
+    st.rerun()
 
 # -----------------------------
-# Chat Display
+# Display chat
 # -----------------------------
-st.title("AI Legal Assistant Chat")
-chat_container = st.container()
-
-def render_chat():
-    with chat_container:
-        st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-        for msg in st.session_state.messages:
-            css_class = "user-message" if msg["role"] == "user" else "bot-message"
-            content = msg["content"].replace("\n", "<br>") if msg["role"] == "assistant" else msg["content"]
-            st.markdown(f'<div class="chat-message {css_class}">{content}</div>', unsafe_allow_html=True)
-
-        # Show loading bubble if waiting for assistant
-        if st.session_state.loading:
-            st.markdown('<div class="chat-message bot-message">Typing...</div>', unsafe_allow_html=True)
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-render_chat()
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        render_message(msg["content"], msg["role"])
 
 # -----------------------------
-# Input Box
+# User input
 # -----------------------------
 user_input = st.chat_input("Ask your legal question...")
 
 if user_input:
-    # Add user message immediately
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    st.session_state.loading = True
-    render_chat()  # Show user message + loading bubble
+    # Show user message immediately
+    st.session_state.messages.append(
+        {"role": "user", "content": user_input}
+    )
+    st.session_state.pending_prompt = user_input
+    st.rerun()
 
-    # Make API request
-    payload = {"prompt": user_input}
-    try:
-        res = requests.post(API_URL, headers=API_HEADERS, json=payload)
-        response_text = res.json().get("response", "Error: No response from API")
-    except Exception as e:
-        response_text = f"Error connecting to API: {e}"
+# -----------------------------
+# Backend call
+# -----------------------------
+if st.session_state.pending_prompt:
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            try:
+                res = requests.post(
+                    API_URL,
+                    headers=API_HEADERS,
+                    json={"prompt": st.session_state.pending_prompt},
+                    timeout=120
+                )
+                response_text = res.json().get(
+                    "response", "No response from API"
+                )
+            except Exception as e:
+                response_text = f"Error connecting to API:\n{e}"
 
-    # Add assistant response and remove loading
-    st.session_state.loading = False
-    st.session_state.messages.append({"role": "assistant", "content": response_text})
-    render_chat()
+    st.session_state.messages.append(
+        {"role": "assistant", "content": response_text}
+    )
+    st.session_state.pending_prompt = None
     st.rerun()
