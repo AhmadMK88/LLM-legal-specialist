@@ -1,6 +1,7 @@
 bitsandbytes
 datasets==2.19.1
 fastapi
+huggingface_hub
 numpy==1.26.4
 requests
 streamlit
