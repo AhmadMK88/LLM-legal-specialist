@@ -85,14 +85,13 @@ def generate_answer(question):
     prompt_text = prompt.format(question=question)
     output = llm_pipe(prompt_text)[0]["generated_text"]
     json_block = extract_json_block(output)
-    parsed_json = parse_json(json_block)
 
-    language = detect(parsed_json.get("conclusion", "N/A"))
+    language = detect(json_block.get("conclusion", "N/A"))
     labels = LABELS[language]
     
-    conclusion = parsed_json.get('conclusion', 'N/A')
-    related_laws = parsed_json.get('related_laws', 'N/A')
-    risk_level = parsed_json.get('risk_level', 'N/A')
+    conclusion = json_block.get('conclusion', 'N/A')
+    related_laws = json_block.get('related_laws', 'N/A')
+    risk_level = json_block.get('risk_level', 'N/A')
 
     answer = (
         f"{conclusion}\n"

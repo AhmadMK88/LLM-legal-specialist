@@ -1,36 +1,60 @@
 import json
 import re
+from typing import Dict
 
-def extract_json_block(text):
-    candidates = re.findall(r"\{[\s\S]*?\}", text)
 
-    if not candidates:
-        raise ValueError("No JSON found in model output\nOutput was:\n" + text)
+_JSON_OBJECT_REGEX = re.compile(r"\{[\s\S]*?\}")
+_TRAILING_COMMA_REGEX = re.compile(r",\s*([}\]])")
+_COMMENT_REGEX = re.compile(r"//.*?$", flags=re.MULTILINE)
 
-    for block in reversed(candidates):
+
+def _clean_json(text: str) -> str:
+    """
+    Cleans common LLM JSON issues:
+    - Removes comments
+    - Removes trailing commas
+    - Strips unnecessary whitespace
+
+    Args: 
+        - text(str): json block to be cleaned
+    
+    Returns:
+        - test(str): cleaned json block
+    """
+    text = _COMMENT_REGEX.sub("", text)
+    text = _TRAILING_COMMA_REGEX.sub(r"\1", text)
+    return text.strip()
+
+
+def extract_json_block(text: str) -> Dict:
+    """
+    Extracts the LAST valid JSON object from a text blob.
+    LLMs often emit multiple JSON-like blocks; the last one
+    is usually the final answer.
+
+    Args:
+        - text(str): text to extract json block from
+    
+    Returns:
+        - json_block(Dict): extracted json block
+    """
+    matches = _JSON_OBJECT_REGEX.findall(text)
+
+    if not matches:
+        raise ValueError(
+            "No JSON object found in model output.\n"
+            f"Raw output:\n{text}"
+        )
+
+    for candidate in reversed(matches):
+        cleaned = _clean_json(candidate)
         try:
-            cleaned = re.sub(r"//.*", "", block)   # remove comments
-            cleaned = cleaned.replace("\n", "")
-            cleaned = cleaned.replace("\t", "")
-            cleaned = cleaned.replace(",}", "}")   # fix trailing commas
-
-            json.loads(cleaned)  # test
-            return cleaned
-        except:
+            json_block = json.loads(cleaned)
+            return json_block
+        except json.JSONDecodeError:
             continue
 
-    raise ValueError("No valid JSON block found after cleaning.\nCandidates:\n" + str(candidates))
-
-def parse_json(json_str):
-    match = re.search(r"\{.*\}", json_str, flags=re.DOTALL)
-    if not match:
-        raise ValueError("No valid JSON object found.")
-
-    cleaned = match.group(0).strip()
-    cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
-
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"JSON decode failed after cleaning: {e}\nCleaned JSON:\n{cleaned}")
-
+    raise ValueError(
+        "JSON blocks were found, but none were valid after cleaning.\n"
+        f"Candidates:\n{matches}"
+    )
