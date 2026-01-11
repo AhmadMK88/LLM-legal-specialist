@@ -13,7 +13,7 @@ LORA_CONFIG = LoraConfig(
     bias="none",
     task_type="CAUSAL_LM"
 )
-
+MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
 TRAINING_ARGS = TrainingArguments(
     output_dir="legal-qwen25-7b",
     per_device_train_batch_size=1,

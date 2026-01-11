@@ -1,3 +1,5 @@
+from config.configs import TRAINING_ARGS, LORA_CONFIG, MODEL_NAME
+from datasets import Dataset
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -5,45 +7,66 @@ from transformers import (
     TrainingArguments,
     Trainer,
 )
-from peft import get_peft_model
+from pathlib import Path
+from peft import get_peft_model, PeftModel
 import shutil
+from src.dataset import create_dataset
 
-from config.configs import *
-from src.dataset import *
-
-def main():
+def _load_model() -> PeftModel:
+    """
+    loads used model with applying lora configs
     
-    MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
-    #Load tokenizer + fix special tokens
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    Returns:
+        - model(PeftModel): model with lora configs
+    """
 
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    if tokenizer.bos_token is None:
-        tokenizer.bos_token = tokenizer.eos_token
-    if tokenizer.eos_token is None:
-        tokenizer.eos_token = tokenizer.eos_token
-
-    #Data collator
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer,
-        mlm=False
-    )
-
-    #Load Qwen in 4-bit + LoRA
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
         load_in_4bit=True,
         device_map="auto"
     )
 
-    #Apply Lora configs to model
     model = get_peft_model(model, LORA_CONFIG)
+    return model
 
-    #Create dataset 
-    train_dataset, test_dataset = create_dataset(tokenizer)
+def _load_tokenizer() -> AutoTokenizer:
+    """
+    loads used model tokenizer
     
-    #Define trainer
+    Returns:
+        - tokenizer(AutoTokenizer) : ready to use
+    """
+
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    return tokenizer
+
+def _train(
+    model: PeftModel,
+    tokenizer: AutoTokenizer,
+    train_dataset: Dataset,
+    test_dataset: Dataset
+) -> Trainer:
+    """
+    Create a trainer object using model, tokenizer and dataset
+    Args:
+        - model(PeftModel): used model for text generation
+        - tokenizer(AutoTokenizer): tokenizer from the used model
+        - train_dataset(Dataset): training dataset
+        - test_dataset(Dataset): testing dataset
+    
+    Returns:
+        - trainer(Trainer): trainer object 
+    """
+
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer,
+        mlm=False,
+    )
+
     trainer = Trainer(
         model=model,
         args=TRAINING_ARGS,
@@ -53,15 +76,31 @@ def main():
         data_collator=data_collator,
     )
 
-    #Train
     trainer.train()
+    return trainer
 
-    #Remove training configs
-    shutil.rmtree(TRAINING_ARGS.output_dir)
+def main():
     
-    #Save fully merged model (base + lora parameters)
-    merged_model = trainer.model.merge_and_unload()
-    merged_model.save_pretrained("full_model")
+    #Load tokenizer + fix special tokens
+    tokenizer = _load_tokenizer()
+
+    #Load Qwen in 4-bit + LoRA
+    model = _load_model()
+
+    #Create dataset 
+    train_dataset, test_dataset = create_dataset(tokenizer)
+    
+    #Train 
+    trainer = _train(model, tokenizer, train_dataset, test_dataset)
+
+    #Remove training configs 
+    output_dir = Path(TRAINING_ARGS.output_dir) 
+    if output_dir.exists(): 
+        shutil.rmtree(output_dir) 
+    
+    #Save fully merged model (base + lora parameters) 
+    merged_model = trainer.model.merge_and_unload() 
+    merged_model.save_pretrained("full_model") 
     tokenizer.save_pretrained("full_model")
 
 if __name__ == "__main__" :
