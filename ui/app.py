@@ -3,44 +3,53 @@ import requests
 from config.configs import API_URL, API_HEADERS
 from langdetect import detect
 
-# -----------------------------
+# RTL-aware renderer
+def render_message(text: str):
+    """
+    Render incoming response from model
+    
+    Args:
+        - text(str): incoming answer to be formatted
+    """
+
+    lang = detect(text)
+
+    direction = "ltr" if lang == "en" else "rtl"
+    alignment = "left" if lang == "en" else "right"
+
+    st.markdown(
+        f"""<div dir="{direction}" 
+            style="
+                text-align:{alignment}; 
+                white-space:pre-line; 
+                margin:0;
+            ">
+            {text}
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+#-----------------------------
 # Page config
-# -----------------------------
+#-----------------------------
 st.set_page_config(
     page_title="Legal AI Assistant",
     page_icon="⚖️",
     layout="wide"
 )
 
-# -----------------------------
-# Helper: RTL-aware renderer
-# -----------------------------
-def render_message(text: str, role: str):
-    try:
-        lang = detect(text)
-    except:
-        lang = "en"
-
-    if lang == "ar":
-        st.markdown(
-            f'<div dir="rtl" style="text-align:right; white-space:pre-line; margin:0;">{text}</div>',
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown(text)
-
-# -----------------------------
+#-----------------------------
 # Session state
-# -----------------------------
+#-----------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "pending_prompt" not in st.session_state:
     st.session_state.pending_prompt = None
 
-# -----------------------------
+#-----------------------------
 # Sidebar
-# -----------------------------
+#-----------------------------
 st.sidebar.title("⚖️ Legal AI Specialist")
 st.sidebar.write("Ask legal questions with an LLM backend.")
 
@@ -53,7 +62,7 @@ if st.sidebar.button("Clear Chat"):
 # -----------------------------
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        render_message(msg["content"], msg["role"])
+        render_message(msg["content"])
 
 # -----------------------------
 # User input
