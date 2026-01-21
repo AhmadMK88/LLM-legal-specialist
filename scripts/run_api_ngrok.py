@@ -17,6 +17,6 @@ def free_port():
 port = free_port()
 conf.get_default().auth_token = NGROK_TOKEN
 public_url = ngrok.connect(port)
-print("🚀 Public API URL:", public_url.public_url + "/generate")
 
+print("🚀 Public API URL:", public_url.public_url + "/generate")
 uvicorn.run(app, host="0.0.0.0", port=port)

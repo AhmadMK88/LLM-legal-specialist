@@ -1,10 +1,11 @@
+import os 
 from peft import LoraConfig
 from transformers import TrainingArguments
 
-API_KEY = "secret123"
+API_KEY =  os.environ.get("API_KEY")
 API_URL = "https://barbituric-inhomogeneous-marisol.ngrok-free.dev/generate"
-API_HEADERS = {"Authorization": "Bearer secret123"}
-NGROK_TOKEN = "35xpeJxb2oIm1GxULp8VMjZnqeN_6t1nU7D67QQQqrSqPwXQY"
+API_HEADERS = {"Authorization": f"Bearer {API_KEY}"}
+NGROK_TOKEN = os.environ.get("NGROK_TOKEN")
 LORA_CONFIG = LoraConfig(
     r=16,
     lora_alpha=32,
