@@ -5,29 +5,29 @@ from langdetect import detect
 
 # RTL-aware renderer
 def render_message(text: str):
-    """
-    Render incoming response from model
-    
-    Args:
-        - text(str): incoming answer to be formatted
-    """
-
     lang = detect(text)
-
-    direction = "ltr" if lang == "en" else "rtl"
-    alignment = "left" if lang == "en" else "right"
+    is_rtl = lang == "ar"
 
     st.markdown(
-        f"""<div dir="{direction}" 
+        f"""
+        <div
+            dir="{'rtl' if is_rtl else 'ltr'}"
             style="
-                text-align:{alignment}; 
-                white-space:pre-line; 
-                margin:0;
-            ">
-            {text}
-        </div>""",
+                display: flex;
+                align-items: center;
+                justify-content: {'flex-end' if is_rtl else 'flex-start'};
+                text-align: {'right' if is_rtl else 'left'};
+                width: 100%;
+                white-space: pre-wrap;
+                line-height: 1.4;
+            "
+        >
+            <span>{text}</span>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
+
 
 #-----------------------------
 # Page config
