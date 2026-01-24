@@ -23,7 +23,7 @@ A multilingual Legal AI Assistant built with a fine-tuned Qwen LLM, FastAPI back
 
 https://github.com/AhmadMK88/LLM-legal-specialist/tree/master/assets/demo.mp4
 
-## 🚀 Running the Project
+## Running the Project
 first insatll requirements:
 ```bash
 pip install -r requirements.txt
